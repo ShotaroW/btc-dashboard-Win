@@ -1,3 +1,4 @@
+import logging
 import time
 
 import altair as alt
@@ -5,6 +6,9 @@ import pandas as pd
 import requests
 import streamlit as st
 from streamlit_autorefresh import st_autorefresh
+
+logging.basicConfig(level=logging.WARNING, format="%(asctime)s %(levelname)s %(message)s")
+logger = logging.getLogger(__name__)
 
 from src.ai_chat import build_context, explain_prediction, stream_ai_response
 from src.database import ensure_table_exists, load_data, save_bulk_data, save_price
@@ -179,7 +183,8 @@ if st.button("予測を実行"):
                 try:
                     explanation = explain_prediction(price, forecast_df)
                     st.session_state["forecast_explanation"] = explanation
-                except Exception:
+                except Exception as e:
+                    logger.warning("AI解説の生成に失敗しました: %s", e, exc_info=True)
                     st.session_state["forecast_explanation"] = None
 
 if "forecast_df" in st.session_state:

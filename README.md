@@ -1,76 +1,141 @@
-# BTC Dashboard
+# BTC Price Dashboard
 
-A simple Python project that collects Bitcoin price data, stores it in SQLite, and analyzes it.
+リアルタイムのBitcoin価格を取得・蓄積し、AIによる解説と24時間価格予測を備えたダッシュボードです。
 
-## Project Overview
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue)
+![Streamlit](https://img.shields.io/badge/Streamlit-1.x-red)
+![Prophet](https://img.shields.io/badge/Prophet-1.3-orange)
+![Ollama](https://img.shields.io/badge/Ollama-local%20LLM-green)
+![SQLite](https://img.shields.io/badge/SQLite-3-lightgrey)
 
-This project demonstrates a basic data pipeline:
+---
 
-1. Fetch Bitcoin price from an API
-2. Store the data in a SQLite database
-3. Analyze the stored data
-4. (Later) Visualize the data with a dashboard
+## 機能
 
-## Project Structure
+| 機能 | 説明 |
+|---|---|
+| リアルタイム価格表示 | Binance APIからBTC/USDTを取得し円換算して表示 |
+| 価格履歴グラフ | 1日・1週間のインタラクティブなチャート |
+| 24時間価格予測 | Prophetによる時系列予測と信頼区間の可視化 |
+| AIによる予測解説 | ローカルLLM（Ollama）が予測結果を自然言語で解説 |
+| AIチャット | BTCの価格傾向についてAIに質問できる |
 
-```
-btc-dashboard
-│
-├ data/                 # SQLite database
-│   └ btc_data.db
-│
-├ src/
-│   ├ fetch_data.py     # Fetch BTC price from API
-│   ├ database.py       # Database connection and insert logic
-│   └ analyze.py        # Read and analyze stored data
-│
-├ app.py                # Dashboard (planned)
-├ requirements.txt      # Python dependencies
-└ README.md
-```
+---
 
-## How to Run
-
-### 1. Install dependencies
+## システム構成
 
 ```
+Binance API ──┐
+              ├──► fetcher.py ──► database.py (SQLite)
+exchangerate  ┘                        │
+                                       ▼
+                                    app.py (Streamlit)
+                                       │
+                              ┌────────┴────────┐
+                              ▼                 ▼
+                         predictor.py       ai_chat.py
+                         (Prophet)          (Ollama)
+```
+
+---
+
+## 技術スタック
+
+- **フロントエンド**: [Streamlit](https://streamlit.io/) + [Altair](https://altair-viz.github.io/)
+- **価格取得**: Binance REST API / exchangerate.host / CoinGecko API
+- **データ保存**: SQLite（`data/btc_data.db`）
+- **価格予測**: [Prophet](https://facebook.github.io/prophet/)（Meta製時系列予測ライブラリ）
+- **AI機能**: [Ollama](https://ollama.com/)（ローカルLLM、`qwen3.5:9b`使用）
+
+---
+
+## セットアップ
+
+### 前提条件
+
+- Python 3.10 以上
+- [Ollama](https://ollama.com/) インストール済み
+
+### 1. リポジトリをクローン
+
+```bash
+git clone https://github.com/ShotaroW/btc-dashboard-Win.git
+cd btc-dashboard-Win
+```
+
+### 2. 依存パッケージをインストール
+
+```bash
 pip install -r requirements.txt
 ```
 
-or
+### 3. Ollamaモデルをダウンロード
 
-```
-pip install requests pandas
-```
-
-### 2. Fetch Bitcoin price
-
-```
-python src/fetch_data.py
+```bash
+ollama pull qwen3.5:9b
 ```
 
-This will:
-- Call the CoinGecko API
-- Get the BTC price
-- Save it to the SQLite database
+### 4. Ollamaを起動
 
-### 3. Analyze stored data
-
-```
-python src/analyze.py
+```bash
+ollama serve
 ```
 
-This reads the stored BTC price data from the database.
+### 5. アプリを起動
 
-## Technologies Used
+```bash
+streamlit run app.py
+```
 
-- Python
-- Requests
-- SQLite
-- Pandas
+ブラウザで http://localhost:8501 が開きます。
 
-## Future Improvements
+---
 
-- Streamlit dashboard
-- Price trend visualization
-- Automatic periodic data collection
+## プロジェクト構成
+
+```
+btc-dashboard-Win/
+├── app.py                  # Streamlitメインアプリ
+├── requirements.txt        # 依存パッケージ
+├── src/
+│   ├── fetcher.py          # BTC価格・為替レート取得
+│   ├── database.py         # SQLiteへの保存・読み込み
+│   ├── predictor.py        # Prophetによる価格予測
+│   ├── ai_chat.py          # Ollamaとのチャット連携
+│   └── analyze.py          # データ分析ユーティリティ
+├── data/
+│   └── btc_data.db         # 価格履歴DB（自動生成、Git管理外）
+└── tests/
+    ├── test_database.py    # DBテスト
+    └── test_fetcher.py     # データ取得テスト
+```
+
+---
+
+## Dockerで起動する場合
+
+```bash
+# Ollamaをホスト側で起動しておく
+ollama serve
+
+# コンテナをビルドして起動
+docker compose up --build
+```
+
+http://localhost:8501 でアクセスできます。
+
+---
+
+## テスト
+
+```bash
+pytest tests/ -v
+```
+
+---
+
+## 注意事項
+
+- 本アプリのAI解説・価格予測は**投資アドバイスではありません**
+- 価格データはリアルタイムに近いものですが、遅延が生じる場合があります
+- Ollamaはローカルで動作するため、外部にデータは送信されません
