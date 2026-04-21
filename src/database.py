@@ -4,6 +4,7 @@ import sqlite3
 import pandas as pd
 
 DB_NAME = "data/btc_data.db"
+RETENTION_DAYS = 7
 
 
 def ensure_table_exists():
@@ -20,12 +21,20 @@ def ensure_table_exists():
         )
 
 
+def prune_old_data(retention_days: int = RETENTION_DAYS, reference_time=None):
+    now = pd.Timestamp.now() if reference_time is None else pd.Timestamp(reference_time)
+    cutoff = (now - pd.Timedelta(days=retention_days)).strftime("%Y-%m-%d %H:%M:%S")
+    with sqlite3.connect(DB_NAME) as conn:
+        conn.execute("DELETE FROM btc_price WHERE timestamp < ?", (cutoff,))
+
+
 def save_price(timestamp, price_jpy):
     with sqlite3.connect(DB_NAME) as conn:
         conn.execute(
             "INSERT OR IGNORE INTO btc_price (timestamp, price_jpy) VALUES (?, ?)",
             (timestamp, price_jpy),
         )
+    prune_old_data()
 
 
 def save_bulk_data(records):
@@ -34,6 +43,7 @@ def save_bulk_data(records):
             "INSERT OR IGNORE INTO btc_price (timestamp, price_jpy) VALUES (?, ?)",
             records,
         )
+    prune_old_data()
 
 
 def load_data():

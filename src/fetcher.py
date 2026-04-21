@@ -51,7 +51,7 @@ def fetch_btc_price():
             fx_errors.append(f"fallback FX API failed: {e}")
 
     if usd_jpy is None:
-        raise RuntimeError("USD/JPY の取得に失敗しました: " + " | ".join(fx_errors))
+        raise RuntimeError("Failed to fetch USD/JPY rate: " + " | ".join(fx_errors))
 
     price_jpy = btc_usdt * usd_jpy
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -82,6 +82,6 @@ def fetch_historical_data(days=7):
 
     except requests.exceptions.HTTPError as e:
         if e.response is not None and e.response.status_code == 429:
-            print("⚠ 履歴データ取得でレート制限。スキップします")
+            print("⚠ Rate limited while fetching historical data. Skipping.")
             return []
         raise

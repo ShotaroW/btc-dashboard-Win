@@ -1,24 +1,25 @@
 import ollama
 import pandas as pd
 
-MODEL = "qwen3.5:9b"
+MODEL = "deepseek-r1:7b"
 
 SYSTEM_PROMPT = """\
-あなたはBitcoin価格ダッシュボードのAIアシスタントです。
-以下のリアルタイムデータをもとに、ユーザーの質問に日本語で簡潔に答えてください。
-投資アドバイスや将来の価格予測は行わず、データの傾向や事実の説明に留めてください。
+You are an AI assistant for a Bitcoin price dashboard.
+Always respond in English only. Do not use Japanese, Chinese, or any other language.
+Answer the user's questions concisely based on the real-time data below.
+Do not give investment advice or future price predictions; stick to explaining trends and facts.
 
-【ダッシュボードの現在のデータ】
+[Current Dashboard Data]
 {context}\
 """
 
 
 def build_context(df: pd.DataFrame, range_label: str, current_price: float | None) -> str:
     if current_price is None:
-        return "現在の価格データを取得できていません。"
+        return "Current price data is unavailable."
 
     if df.empty:
-        return f"現在のBTC価格: {current_price:,.0f}円（履歴データなし）"
+        return f"Current BTC price: ¥{current_price:,.0f} (no historical data)"
 
     price_min = df["price_jpy"].min()
     price_max = df["price_jpy"].max()
@@ -27,12 +28,12 @@ def build_context(df: pd.DataFrame, range_label: str, current_price: float | Non
     change_pct = (price_last - price_first) / price_first * 100
 
     return (
-        f"表示期間: {range_label}\n"
-        f"現在価格: {current_price:,.0f}円\n"
-        f"期間高値: {price_max:,.0f}円\n"
-        f"期間安値: {price_min:,.0f}円\n"
-        f"期間騰落率: {change_pct:+.2f}%\n"
-        f"データ件数: {len(df)}件"
+        f"Time range: {range_label}\n"
+        f"Current price: ¥{current_price:,.0f}\n"
+        f"Period high: ¥{price_max:,.0f}\n"
+        f"Period low: ¥{price_min:,.0f}\n"
+        f"Period change: {change_pct:+.2f}%\n"
+        f"Data points: {len(df)}"
     )
 
 
@@ -41,21 +42,21 @@ def explain_prediction(current_price: float, forecast_df: pd.DataFrame) -> str:
     change_pct = (last["yhat"] - current_price) / current_price * 100
 
     prompt = (
-        f"現在のBTC価格: {current_price:,.0f}円\n"
-        f"Prophetによる24時間後の予測:\n"
-        f"  予測価格: {last['yhat']:,.0f}円\n"
-        f"  予測上限: {last['yhat_upper']:,.0f}円\n"
-        f"  予測下限: {last['yhat_lower']:,.0f}円\n"
-        f"  変化率: {change_pct:+.2f}%\n\n"
-        "この予測結果を2〜3文でわかりやすく解説してください。"
-        "最後に「あくまで統計的な予測であり、投資判断の根拠にはなりません」と添えてください。"
+        f"Current BTC price: ¥{current_price:,.0f}\n"
+        f"Prophet 24-hour forecast:\n"
+        f"  Predicted price: ¥{last['yhat']:,.0f}\n"
+        f"  Upper bound: ¥{last['yhat_upper']:,.0f}\n"
+        f"  Lower bound: ¥{last['yhat_lower']:,.0f}\n"
+        f"  Change: {change_pct:+.2f}%\n\n"
+        "Explain this forecast in 2-3 sentences. "
+        "End with: 'This is a statistical forecast only and should not be used as investment advice.'"
     )
 
     response = ollama.chat(
         model=MODEL,
-        think=False,
+        think=True,
         messages=[
-            {"role": "system", "content": "あなたはBitcoin価格ダッシュボードのAIアシスタントです。日本語で答えてください。"},
+            {"role": "system", "content": "You are an AI assistant for a Bitcoin price dashboard. Always respond in English only. Do not use Japanese, Chinese, or any other language."},
             {"role": "user", "content": prompt},
         ],
     )
@@ -65,7 +66,7 @@ def explain_prediction(current_price: float, forecast_df: pd.DataFrame) -> str:
 def stream_ai_response(messages: list, context: str):
     response = ollama.chat(
         model=MODEL,
-        think=False,
+        think=True,
         messages=[
             {"role": "system", "content": SYSTEM_PROMPT.format(context=context)},
             *messages,
